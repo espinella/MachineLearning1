@@ -1,0 +1,109 @@
+---
+title: "PracticalMachineLearning"
+author: "Ed Spinella"
+date: "Friday, January 16, 2015"
+output: html_document
+---
+
+####Background
+This project utilizes sample exercise data to construct a model that predicts the manner in which people complete an exercise.
+The training and testing sample datasets include data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har
+
+The outcome variable is "classe", a factor variable with 5 levels. For this data set, participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in 5 different fashions:
+
+- exactly according to the specification (Class A)
+- throwing the elbows to the front (Class B)
+- lifting the dumbbell only halfway (Class C)
+- lowering the dumbbell only halfway (Class D)
+- throwing the hips to the front (Class E)
+
+Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes.
+Prediction evaluations will be based on maximizing the accuracy and minimizing the out-of-sample error. Relevant variables(features)will be used for prediction.
+
+Decision tree and random forest algorithms will be used to construct each candidate model; the model with the highest accuracy will be chosen as final model.
+
+####Load Libraries,Data,Set Seed, Clean Data 
+
+```{r, message=FALSE, warning=FALSE}
+
+library(ElemStatLearn)
+library(caret)
+library(rpart)
+library(randomForest)
+library(AppliedPredictiveModeling)
+set.seed(1234)
+# Loading the train dataset replacing all missing with "NA"
+trainset <- read.csv(file = 'train.csv', na.strings = c('NA','#DIV/0!',''))
+# Loading the test dataset replacing all missing with "NA"
+testset <- read.csv(file = 'test.csv',   na.strings = c('NA','#DIV/0!',''))
+
+# Delete columns with all missing values
+trainset <-trainset[,colSums(is.na(trainset)) == 0]
+testset <-testset[,colSums(is.na(testset)) == 0]
+
+# Delete columns 1-7 as they are irrelevant(related to the time-series or are not numeric) to current project
+trainset <- trainset[,-c(1:7)]
+testset <- testset[,-c(1:7)]
+
+# View the row(observations) and columns(features) that remain
+dim(trainset); dim(testset)
+```
+The training data set contains 53 variables and 19622 obs.
+The testing data set contains 53 variables and 20 obs.
+
+####Splitting Data into Testing and Cross-Validation
+
+We subset our modified training data set into "train" and "test", which allows us to assess model accuracy.
+```{r}
+subsamples <- createDataPartition(y=trainset$classe, p=0.75, list=FALSE)
+train <- trainset[subsamples, ] 
+test <- trainset[-subsamples, ]
+dim(train); dim(test)
+```
+We build our prediction models with both the Random Forest and Decision Tree Algorithms
+
+**Prediction Model 1: Random Forest**
+```{r, warning = FALSE}
+library(e1071)
+library(randomForest)
+
+model1 <- randomForest(train$classe ~. , data= train, method="class")
+
+# Predicting:
+prediction1 <- predict(model1, test, type = "class")
+
+# Test results on test data set:
+confusionMatrix(prediction1, test$classe)
+
+```
+**Prediction Model 2: Decision Tree**
+```{r}
+model2 <- rpart(classe ~ ., data=train, method="class")
+
+# Predicting:
+prediction2 <- predict(model2, test, type = "class")
+
+confusionMatrix(prediction2, test$classe)
+
+```
+####Results/Decision
+
+The Random Forest algorithm performs better than Decision Trees and is therefore the chosen model for submission. Accuracy for Random Forest model is 0.995 (95% CI: (0.993, 0.997)) compared to 0.739 (95% CI: (0.727, 0.752)) for Decision Tree model. 
+
+The Random Forest model is choosen. The accuracy of the model is 0.995.  **The expected out-of-sample error is estimated at 0.005, or 0.5% determined by subtracting the prediction accuracy of (.995) from 1.** 
+
+The chosen model provides the following prediction when run against the 20 test datset cases.
+```{r}
+predictfinal <- predict(model1, testset, type="class")
+predictfinal
+```
+
+
+
+
+ 
+
+
+  
+ 
+
